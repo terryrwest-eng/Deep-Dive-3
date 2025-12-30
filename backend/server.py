@@ -521,6 +521,7 @@ async def pro_models(payload: Dict[str, Any]):
 
 @api_router.delete("/pro/documents/{pro_document_id}")
 async def delete_pro_document(pro_document_id: str, gemini_api_key: str):
+    gemini_api_key = os.environ.get('GOOGLE_API_KEY_DEEP_DIVE') or gemini_api_key
     doc = await db.pro_documents.find_one({"id": pro_document_id}, {"_id": 0})
     if not doc: raise HTTPException(status_code=404, detail="Pro document not found")
     for p in doc.get('parts', []):
