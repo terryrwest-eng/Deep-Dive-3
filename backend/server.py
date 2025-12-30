@@ -511,8 +511,9 @@ async def get_pro_document(pro_document_id: str):
 
 @api_router.post("/pro/models")
 async def pro_models(payload: Dict[str, Any]):
-    gemini_api_key = payload.get('gemini_api_key')
-    if not gemini_api_key: raise HTTPException(status_code=400, detail="gemini_api_key is required")
+    # gemini_api_key = payload.get('gemini_api_key')
+    gemini_api_key = os.environ.get('GOOGLE_API_KEY_DEEP_DIVE')
+    if not gemini_api_key: raise HTTPException(status_code=400, detail="gemini_api_key is required (server side)")
     models = await gemini_models_list(gemini_api_key)
     simplified = [{"name": (m.get('name', '') or '').replace('models/', ''), "supportedGenerationMethods": m.get('supportedGenerationMethods') or []} for m in models]
     pro_generate = [s["name"] for s in simplified if 'pro' in s["name"].lower() and 'flash' not in s["name"].lower() and 'generateContent' in s["supportedGenerationMethods"]]
