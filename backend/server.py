@@ -475,6 +475,11 @@ async def pro_upload_chunk(upload_id: str, request: Request):
 
 @api_router.post("/pro/upload/complete")
 async def pro_upload_complete(req: ProUploadCompleteRequest):
+    # Use server-side key instead of client-provided key
+    server_api_key = os.environ.get('GOOGLE_API_KEY_DEEP_DIVE')
+    if not server_api_key:
+        raise HTTPException(status_code=500, detail="GOOGLE_API_KEY_DEEP_DIVE not configured")
+
     session = await db.pro_upload_sessions.find_one({"id": req.upload_id}, {"_id": 0})
     if not session: raise HTTPException(status_code=404, detail="Upload session not found")
     pdf_path = Path(session["tmp_path"])
@@ -486,7 +491,7 @@ async def pro_upload_complete(req: ProUploadCompleteRequest):
     else: parts_meta = [{"part_index": 1, "start_page": 1, "end_page": total_pages, "local_path": str(pdf_path), "size_bytes": pdf_path.stat().st_size}]
     gemini_parts = []
     for p in parts_meta:
-        file_obj = await gemini_files_resumable_upload(req.gemini_api_key, Path(p["local_path"]), f"{session['filename']} (pages {p['start_page']}-{p['end_page']})")
+        file_obj = await gemini_files_resumable_upload(server_api_key, Path(p["local_path"]), f"{session['filename']} (pages {p['start_page']}-{p['end_page']})")
         gemini_parts.append({**p, "gemini_file_name": file_obj.get('name'), "gemini_file_uri": file_obj.get('uri'), "expiration_time": file_obj.get('expirationTime'), "state": (file_obj.get('state') or {}).get('name') if isinstance(file_obj.get('state'), dict) else file_obj.get('state')})
     pro_doc_id = str(uuid.uuid4())
     pro_doc = {"id": pro_doc_id, "filename": session['filename'], "total_pages": total_pages, "size_bytes": session.get('size_bytes'), "parts": gemini_parts, "created_at": datetime.now(timezone.utc).isoformat(), "status": "ready"}
