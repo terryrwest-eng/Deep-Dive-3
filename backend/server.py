@@ -532,6 +532,12 @@ async def delete_pro_document(pro_document_id: str, gemini_api_key: str):
 
 @api_router.post("/pro/analyze/stream")
 async def pro_analyze_stream(req: ProAnalyzeRequest):
+    # Use server-side key
+    server_api_key = os.environ.get('GOOGLE_API_KEY_DEEP_DIVE')
+    if not server_api_key:
+        # yield f"data: {json.dumps({'type':'error','message':'GOOGLE_API_KEY_DEEP_DIVE not configured'})}\n\n"
+        raise HTTPException(status_code=500, detail="GOOGLE_API_KEY_DEEP_DIVE not configured")
+
     doc = await db.pro_documents.find_one({"id": req.pro_document_id}, {"_id": 0})
     if not doc: raise HTTPException(status_code=404, detail="Pro document not found")
     total_pages = doc.get('total_pages', 0)
@@ -551,7 +557,7 @@ async def pro_analyze_stream(req: ProAnalyzeRequest):
             if not batch_mode:
                 global_page_note = "\n".join([f"- Part {p['part_index']}: this file starts at Global Page {p['start_page']} (ends at {p['end_page']})." for p in parts])
                 user_text = f"USER QUERY:\n{req.query}\n\nGLOBAL PAGE OFFSETS:\n{global_page_note}\n\nNow perform the process and return JSON."
-                resp = await gemini_generate_content_with_files(api_key=req.gemini_api_key, model_preferred="gemini-1.5-pro", system_instruction=system_instruction, user_text=user_text, file_uris=_build_file_uri_parts(parts))
+                resp = await gemini_generate_content_with_files(api_key=server_api_key, model_preferred="gemini-1.5-pro", system_instruction=system_instruction, user_text=user_text, file_uris=_build_file_uri_parts(parts))
                 model_used = resp.get('__model_used__')
                 parsed = _safe_parse_json(_extract_candidate_json_text(resp))
                 await db.pro_analyses.update_one({"id": analysis_id}, {"$set": {"model_used": model_used, "status": "complete", "result": parsed}})
@@ -564,7 +570,7 @@ async def pro_analyze_stream(req: ProAnalyzeRequest):
                     b_start, b_end = p['start_page'], p['end_page']
                     yield f"data: {json.dumps({'type':'batch_start','batch': idx,'total_batches': len(parts),'pages': {'start': b_start, 'end': b_end}})}\n\n"
                     user_text = f"PART {idx} of {len(parts)}.\nUSER QUERY:\n{req.query}\n\nGLOBAL PAGE NOTE:\nThis file contains pages {b_start} to {b_end}.\n\nReturn JSON findings for this part only."
-                    resp = await gemini_generate_content_with_files(api_key=req.gemini_api_key, model_preferred="gemini-1.5-pro", system_instruction=system_instruction, user_text=user_text, file_uris=[{"mime_type": "application/pdf", "file_uri": p['gemini_file_uri']}])
+                    resp = await gemini_generate_content_with_files(api_key=server_api_key, model_preferred="gemini-1.5-pro", system_instruction=system_instruction, user_text=user_text, file_uris=[{"mime_type": "application/pdf", "file_uri": p['gemini_file_uri']}])
                     batch_results.append(_safe_parse_json(_extract_candidate_json_text(resp)))
                     yield f"data: {json.dumps({'type':'batch_done','batch': idx})}\n\n"
             else:
@@ -572,7 +578,7 @@ async def pro_analyze_stream(req: ProAnalyzeRequest):
                  pass
 
             merge_prompt = {"batches": batch_results, "instruction": "Combine into one cohesive report."}
-            resp_merge = await gemini_generate_content_with_files(api_key=req.gemini_api_key, model_preferred="gemini-1.5-pro", system_instruction=system_instruction, user_text=json.dumps(merge_prompt), file_uris=[])
+            resp_merge = await gemini_generate_content_with_files(api_key=server_api_key, model_preferred="gemini-1.5-pro", system_instruction=system_instruction, user_text=json.dumps(merge_prompt), file_uris=[])
             merged = _safe_parse_json(_extract_candidate_json_text(resp_merge))
             await db.pro_analyses.update_one({"id": analysis_id}, {"$set": {"status": "complete", "result": merged}})
             yield f"data: {json.dumps({'type':'done','analysis_id':analysis_id,'result':merged})}\n\n"
