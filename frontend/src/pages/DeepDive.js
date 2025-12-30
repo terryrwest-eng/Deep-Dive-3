@@ -595,17 +595,17 @@ const DeepDive = () => {
         </div>
 
         {/* Main Content */}
-        <div className="col-span-8 bg-[#09090b]">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-            <div className="border-b border-[#27272a] px-4 pt-2">
+        <div className="col-span-8 bg-[#09090b] flex flex-col h-full overflow-hidden">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
+            <div className="border-b border-[#27272a] px-4 pt-2 flex-none">
               <TabsList className="bg-transparent">
                 <TabsTrigger value="results" className="data-[state=active]:border-b-2 data-[state=active]:border-[#F59E0B] rounded-none px-6">Results</TabsTrigger>
                 <TabsTrigger value="chat" className="data-[state=active]:border-b-2 data-[state=active]:border-[#F59E0B] rounded-none px-6">Chat</TabsTrigger>
               </TabsList>
             </div>
 
-            <div className="flex-1 overflow-hidden p-4">
-              <TabsContent value="results" className="h-full m-0 overflow-y-auto">
+            <div className="flex-1 min-h-0 relative">
+              <TabsContent value="results" className="absolute inset-0 overflow-y-auto p-4 m-0">
                 {analyzing ? (
                   <div className="h-full flex flex-col items-center justify-center space-y-4">
                     <Loader2 className="w-12 h-12 text-[#F59E0B] animate-spin" />
