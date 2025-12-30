@@ -83,3 +83,7 @@ backend/pro_uploads/aaf7f4c5-c1dd-4cbd-bd48-3085ffa02ac4.pdf
 # Environment files
 *.env
 *.env.*
+-e 
+# Environment files
+*.env
+*.env.*
