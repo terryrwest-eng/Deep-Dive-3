@@ -518,6 +518,7 @@ const DeepDive = () => {
               setAnalysisResult(data.result);
               setProgress({ percent: 100, status: 'Complete' });
               setAnalyzing(false);
+              loadHistory(); // Refresh history after new analysis
             }
             if (data.type === 'error') {
               toast.error(data.message);
