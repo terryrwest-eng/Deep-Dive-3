@@ -34,8 +34,6 @@ import { Switch } from "@/components/ui/switch";
 
 
 // Gemini Pro (native PDF) settings
-const GEMINI_KEY_STORAGE = "gemini_api_key";
-
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
@@ -254,7 +252,7 @@ const PageRangeSelector = ({ pageRange, onPageRangeChange, totalPages, enabled, 
         </div>
       ) : (
         <p className="text-xs text-[#a1a1aa]">
-          Will scan all <span className="text-[#fafafa] font-medium">{totalPages || 0}</span> pages. Click {"\"Enabled\""} to scan specific sections.
+          Will scan all <span className="text-[#fafafa] font-medium">{totalPages || 0}</span> pages. Click "Enabled" to scan specific sections.
         </p>
       )}
     </div>
@@ -651,7 +649,7 @@ const ChatPanel = ({ documents }) => {
           <div className="flex flex-col items-center justify-center h-full text-center py-8">
             <BookOpen className="w-10 h-10 text-[#27272a] mb-3" />
             <p className="text-[#a1a1aa] text-sm">Ask anything about your documents</p>
-            <p className="text-[#52525b] text-xs mt-1">I&apos;ll search every page to find the answer</p>
+            <p className="text-[#52525b] text-xs mt-1">I'll search every page to find the answer</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -702,7 +700,6 @@ const DeepDive = () => {
 
   // Gemini Pro (native PDF) mode
   const [useProMode, setUseProMode] = useState(true); // Pro-only per requirements
-  const [geminiKey, setGeminiKey] = useState(localStorage.getItem(GEMINI_KEY_STORAGE) || "");
   const [proUploading, setProUploading] = useState(false);
   const [proUploadProgress, setProUploadProgress] = useState({ percent: 0, status: '' });
   const [proDocuments, setProDocuments] = useState([]);
@@ -763,18 +760,9 @@ const DeepDive = () => {
     return () => clearTimeout(t);
   }, [useProMode]);
 
-  const saveGeminiKey = (key) => {
-    setGeminiKey(key);
-    localStorage.setItem(GEMINI_KEY_STORAGE, key);
-  };
-
   const uploadPdfPro = async (file) => {
     if (!file || !file.name.toLowerCase().endsWith('.pdf')) {
       toast.error('Please choose a PDF');
-      return;
-    }
-    if (!geminiKey.trim()) {
-      toast.error('Enter your Gemini API key first');
       return;
     }
 
@@ -804,9 +792,10 @@ const DeepDive = () => {
       }
 
       setProUploadProgress({ percent: 70, status: 'Uploading to Gemini Files API (this can take a bit)...' });
+      // Backend now uses env key, no need to send it
       const complete = await axios.post(`${API}/pro/upload/complete`, {
         upload_id: uploadId,
-        gemini_api_key: geminiKey.trim(),
+        gemini_api_key: "SERVER_ENV_KEY", // Dummy value
       });
 
       toast.success(`Pro upload complete: ${complete.data.total_pages} pages`);
@@ -821,12 +810,9 @@ const DeepDive = () => {
 
 
   const runProDiagnostics = async () => {
-    if (!geminiKey.trim()) {
-      toast.error('Enter your Gemini API key first');
-      return;
-    }
     try {
-      const res = await axios.post(`${API}/pro/models`, { gemini_api_key: geminiKey.trim() });
+      // Backend now uses env key
+      const res = await axios.post(`${API}/pro/models`, { gemini_api_key: "SERVER_ENV_KEY" });
       const pro = res.data?.pro_generateContent_models || [];
       if (pro.length) {
         toast.success(`Available Pro model(s): ${pro.slice(0, 3).join(', ')}`);
@@ -847,10 +833,6 @@ const DeepDive = () => {
       toast.error('Enter what you want to find');
       return;
     }
-    if (!geminiKey.trim()) {
-      toast.error('Enter your Gemini API key first');
-      return;
-    }
 
     setAnalyzing(true);
     setActiveTab('results');
@@ -866,7 +848,7 @@ const DeepDive = () => {
         body: JSON.stringify({
           pro_document_id: selectedProDoc,
           query,
-          gemini_api_key: geminiKey.trim(),
+          gemini_api_key: "SERVER_ENV_KEY",
           deep_dive: true,
         })
       });
@@ -943,7 +925,6 @@ const DeepDive = () => {
 
   const sendProChat = async (message) => {
     if (!selectedProDoc) { toast.error('Select a Pro document'); return; }
-    if (!geminiKey.trim()) { toast.error('Enter your Gemini API key first'); return; }
     if (!message.trim()) return;
 
     setProChatMessages(prev => [...prev, { role: 'user', content: message }]);
@@ -953,7 +934,7 @@ const DeepDive = () => {
         session_id: proChatSessionId,
         pro_document_id: selectedProDoc,
         message,
-        gemini_api_key: geminiKey.trim(),
+        gemini_api_key: "SERVER_ENV_KEY",
       });
       setProChatSessionId(res.data.session_id);
       setProChatMessages(prev => [...prev, { role: 'assistant', content: res.data.answer }]);
@@ -1295,14 +1276,11 @@ const DeepDive = () => {
               <div className="mt-3 space-y-3">
                   <div>
                     <Label className="text-xs text-[#a1a1aa]">Gemini API Key</Label>
-                    <Input
-                      value={geminiKey}
-                      onChange={(e) => saveGeminiKey(e.target.value)}
-                      placeholder="AIza..."
-                      className="bg-[#09090b] border-[#27272a] text-[#fafafa] text-sm h-9 mt-1"
-                    />
+                    <div className="flex items-center h-9 mt-1 px-3 bg-[#09090b] border border-[#27272a] rounded">
+                        <span className="text-sm text-[#10B981] font-medium">✓ Configured on Server</span>
+                    </div>
                     <p className="text-[11px] text-[#52525b] mt-1">
-                      Stored in your browser only. Needed for Gemini Files API + Pro model calls.
+                      Using server-configured keys for security.
                     </p>
                     <div className="mt-2">
                       <Button
@@ -1311,7 +1289,7 @@ const DeepDive = () => {
                         className="bg-transparent border-[#27272a] text-[#a1a1aa] hover:bg-[#1c1c1f] hover:text-[#fafafa] h-8 text-xs"
                         onClick={runProDiagnostics}
                       >
-                        Diagnostics: List available Pro models
+                        Diagnostics: Check Pro availability
                       </Button>
                     </div>
                   </div>
