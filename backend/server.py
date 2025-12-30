@@ -295,7 +295,8 @@ def extract_pdf_pages(pdf_content: bytes) -> List[dict]:
 
 async def generate_query_rubric(query: str, model: str = "gemini-2.5-flash") -> dict:
     from emergentintegrations.llm.chat import LlmChat, UserMessage
-    api_key = os.environ.get('EMERGENT_LLM_KEY')
+    # api_key = os.environ.get('EMERGENT_LLM_KEY')
+    api_key = os.environ.get('GOOGLE_API_KEY_ASSISTANT')
     if not api_key: return {"rubric_text": "", "rubric_json": None, "error": "EMERGENT_LLM_KEY not configured"}
     model_map = {
         "gpt-5.2": ("openai", "gpt-5.2"),
@@ -321,7 +322,8 @@ Return STRICT JSON: { "rubric_text": "...", "rubric_json": {...} }"""
 
 async def deep_analyze_stream(pages: List[dict], query: str, doc_name: str, model: str = "gemini-2.5-flash", speed: str = "balanced", rubric_text: Optional[str] = None, relevance_mode: str = "normal"):
     from emergentintegrations.llm.chat import LlmChat, UserMessage
-    api_key = os.environ.get('EMERGENT_LLM_KEY')
+    # api_key = os.environ.get('EMERGENT_LLM_KEY')
+    api_key = os.environ.get('GOOGLE_API_KEY_ASSISTANT')
     if not api_key:
         yield {"type": "error", "message": "EMERGENT_LLM_KEY not configured"}
         return
@@ -379,7 +381,8 @@ async def deep_analyze_stream(pages: List[dict], query: str, doc_name: str, mode
 
 async def chat_with_docs(pages: List[dict], message: str, history: List[dict]) -> str:
     from emergentintegrations.llm.chat import LlmChat, UserMessage
-    api_key = os.environ.get('EMERGENT_LLM_KEY')
+    # api_key = os.environ.get('EMERGENT_LLM_KEY')
+    api_key = os.environ.get('GOOGLE_API_KEY_ASSISTANT')
     if not api_key: raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY not configured")
     doc_text = ""
     for p in pages: doc_text += f"\n[PAGE {p['page_number']}]\n{p['text']}\n"
