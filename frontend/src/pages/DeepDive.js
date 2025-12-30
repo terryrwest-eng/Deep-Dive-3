@@ -650,7 +650,7 @@ const DeepDive = () => {
                 )}
               </TabsContent>
 
-              <TabsContent value="chat" className="h-full m-0">
+              <TabsContent value="chat" className="absolute inset-0 m-0">
                 <ChatPanel documents={selectedDocumentObjects} />
               </TabsContent>
             </div>
