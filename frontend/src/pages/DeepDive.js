@@ -422,6 +422,7 @@ const DeepDive = () => {
   const [selectedSpeed, setSelectedSpeed] = useState("balanced");
   const [pageRangeEnabled, setPageRangeEnabled] = useState(false);
   const [pageRange, setPageRange] = useState({ start: null, end: null });
+  const [history, setHistory] = useState([]); // Store analysis history
 
   const loadDocuments = async () => {
     try {
@@ -432,12 +433,39 @@ const DeepDive = () => {
     }
   };
 
+  const loadHistory = async () => {
+    try {
+      const res = await axios.get(`${API}/pro/analyses`);
+      setHistory(res.data || []);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   useEffect(() => {
     loadDocuments();
+    loadHistory();
   }, []);
 
+  // Restore latest analysis when a document is selected
+  useEffect(() => {
+    if (selectedDocs.length === 1 && !analyzing) {
+      const docId = selectedDocs[0];
+      // Find the most recent analysis for this document
+      const lastAnalysis = history.find(h => h.pro_document_id === docId && h.status === 'complete');
+      
+      if (lastAnalysis && lastAnalysis.result) {
+        setAnalysisResult(lastAnalysis.result);
+        setQuery(lastAnalysis.query || "");
+        toast.info("Restored previous analysis", { duration: 2000 });
+      } else {
+        setAnalysisResult(null);
+        setQuery("");
+      }
+    }
+  }, [selectedDocs, history, analyzing]);
+
   const toggleDoc = (id) => {
-    // Single select for Pro mode typically
     setSelectedDocs(prev => prev.includes(id) ? [] : [id]);
   };
 
