@@ -600,6 +600,11 @@ async def get_pro_analysis(analysis_id: str):
 
 @api_router.post("/pro/chat")
 async def pro_chat(req: ProChatRequest):
+    # Use server-side key
+    server_api_key = os.environ.get('GOOGLE_API_KEY_DEEP_DIVE')
+    if not server_api_key:
+        raise HTTPException(status_code=500, detail="GOOGLE_API_KEY_DEEP_DIVE not configured")
+
     doc = await db.pro_documents.find_one({"id": req.pro_document_id}, {"_id": 0})
     if not doc: raise HTTPException(status_code=404, detail="Pro document not found")
     session = None
@@ -611,7 +616,7 @@ async def pro_chat(req: ProChatRequest):
     global_note = "\n".join([f"- Part {p['part_index']}: this file starts at Global Page {p['start_page']} (ends at {p['end_page']})." for p in parts])
     system_instruction = await _pro_system_instruction()
     user_text = f"FOLLOW-UP QUESTION:\n{req.message}\n\nGLOBAL PAGE OFFSETS:\n{global_note}\n\nAnswer with quotes + global page citations in JSON."
-    resp = await gemini_generate_content_with_files(api_key=req.gemini_api_key, model_preferred="gemini-1.5-pro", system_instruction=system_instruction, user_text=user_text, file_uris=_build_file_uri_parts(parts))
+    resp = await gemini_generate_content_with_files(api_key=server_api_key, model_preferred="gemini-1.5-pro", system_instruction=system_instruction, user_text=user_text, file_uris=_build_file_uri_parts(parts))
     parsed = _safe_parse_json(_extract_candidate_json_text(resp))
     await db.pro_chat_sessions.update_one({"id": session['id']}, {"$push": {"history": {"role": "user", "content": req.message, "at": datetime.now(timezone.utc).isoformat()}}})
     await db.pro_chat_sessions.update_one({"id": session['id']}, {"$push": {"history": {"role": "assistant", "content": parsed, "at": datetime.now(timezone.utc).isoformat()}}})
